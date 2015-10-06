@@ -7,7 +7,7 @@ Programm greift auf einen Teil-Extrakt der Nachrichtensammlung zu.
 Future Import: Python 2.x Division ist nicht korrekt abgebildet
 
 @author: Jan Dombrowicz
-@version: 1.5
+@version: 1.6
 '''
 from __future__ import division
 
@@ -16,15 +16,21 @@ def sandy(unternehmen):
     
     # Import der Module
     import pandas as pd
+    import csv
     
     # Datenimport
-    df_pos = pd.read_csv('/home/jd/Documents/news/positiv_neu.csv', delimiter = ',', names = ['ID', 'Wort'])
-    df_neg = pd.read_csv('/home/jd/Documents/news/negativ_neu.csv', delimiter = ',', names = ['ID', 'Wort'])
-    df_news = pd.read_csv('/home/jd/Documents/Stocks_Prediction_1.0/data/cleaned/'+unternehmen+'.csv', delimiter =';', names = ['Titel', 'Artikel', 'Datum', 'URL', 'Unternehmen'])
+    with open('/home/jd/dev/python/UseCase_StocksPrediction/data/gewichte.csv', mode='r') as f:
+        reader = csv.reader(f)
+        gewichte = {rows[0]: rows[1] for rows in reader}
+
+    df_pos = pd.read_csv('/home/jd/2ext/stocks_prediction_1.0/positiv_neu.csv', delimiter = ',', names = ['ID', 'Wort'])
+    df_neg = pd.read_csv('/home/jd/2ext/stocks_prediction_1.0/negativ_neu.csv', delimiter = ',', names = ['ID', 'Wort'])
+    df_news = pd.read_csv('/home/jd/2ext/stocks_prediction_1.0/data/cleaned/'+unternehmen+'.csv', delimiter =';', names = ['Titel', 'Artikel', 'Datum', 'URL', 'Unternehmen'])
     df_news = df_news.reset_index(drop=True)
     
     df_tmp = pd.DataFrame()
-    
+
+    print(gewichte)
     # DQ -> str.lower() um Wörterbuch mit Artikel zu harmonisieren
     df_pos = df_pos['Wort'].str.lower().tolist()
     df_neg = df_neg['Wort'].str.lower().tolist()
@@ -33,8 +39,6 @@ def sandy(unternehmen):
     cnt_pos = 0
     cnt_neg = 0
     multiplikator = 1
-    neutraleListe={'kein', 'keine'}
-    gewichtungListe = {'mehr'}
     
     # Einlesen der Nachrichten und Vorbereitung der Daten
     # Im Anschluss werden die Wörter auf die Zugehörigkeit zu einem Wörterbuch geprüft und entsprechend gewertet
@@ -51,10 +55,9 @@ def sandy(unternehmen):
             if wort in df_neg:
                 cnt_neg += (multiplikator * 1)
                 multiplikator = 1
-            if wort in gewichtungListe:
-                multiplikator = 2
-            if wort in neutraleListe:
-                multiplikator = 0 
+            if wort in gewichte:
+                multiplikator = int(gewichte[wort])
+                print("Setze Multiplikator " + wort + " auf " + str(gewichte[wort]))
     
         test = pd.Series([(cnt_pos/len(artikel_processed))*100, (cnt_neg/len(artikel_processed))*100, (cnt_pos/len(artikel_processed))*100 - (cnt_neg/len(artikel_processed))*100 ,len(artikel_processed)])
         cnt_pos = 0
@@ -66,6 +69,6 @@ def sandy(unternehmen):
     # Zusammenführung der Dataframes. Fehleranfällig - Besser über einen Key joinen
     df_result = pd.concat([df_news, df_tmp], axis=1)
     
-    df_result.to_csv('/home/jd/Documents/Stocks_Prediction_1.0/'+unternehmen+'_bewertung.csv', sep=';', encoding='utf-8', quotechar='\'')
+    df_result.to_csv('/home/jd/2ext/stocks_prediction_1.0/'+unternehmen+'_bewertung.csv', sep=';', encoding='utf-8', quotechar='\'')
 
 sandy('Adidas')
